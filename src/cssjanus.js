@@ -147,6 +147,8 @@ function CSSJanus() {
 		fourNotationColorRegExp = new RegExp( fourNotationColorPropsPattern + colorPattern + '(\\s+)' + colorPattern + '(\\s+)' + colorPattern + '(\\s+)' + colorPattern + suffixPattern, 'gi' ),
 		bgHorizontalPercentageRegExp = new RegExp( '(background(?:-position)?\\s*:\\s*(?:[^:;,}\\s]+\\s+)*?)(' + quantPattern + ')', 'gi' ),
 		bgHorizontalPercentageXRegExp = new RegExp( '(background-position-x\\s*:\\s*)(-?' + numPattern + '%)', 'gi' ),
+		bgLinearGradient = new RegExp('(background(?:-image)?\\s*:\\s*)([^;]*linear-gradient[^;]*;)', 'gi'),
+		bgLinearGradientDegrees = new RegExp('(linear-gradient\\s*\\(\\s*)(-?' + numPattern + ')(?=deg)', 'gi'),
 		// border-radius: <length or percentage>{1,4} [optional: / <length or percentage>{1,4} ]
 		borderRadiusRegExp = new RegExp( '(border-radius\\s*:\\s*)' + signedQuantPattern + '(?:(?:\\s+' + signedQuantPattern + ')(?:\\s+' + signedQuantPattern + ')?(?:\\s+' + signedQuantPattern + ')?)?' +
 			'(?:(?:(?:\\s*\\/\\s*)' + signedQuantPattern + ')(?:\\s+' + signedQuantPattern + ')?(?:\\s+' + signedQuantPattern + ')?(?:\\s+' + signedQuantPattern + ')?)?' + suffixPattern, 'gi' ),
@@ -180,6 +182,20 @@ function CSSJanus() {
 			}
 		}
 		return pre + value;
+	}
+
+	/**
+	 * Manipulates the linear-gradient functions inside a background or a background-image property
+	 *
+	 * @private
+	 * @param {string} match Matched property
+	 * @param {string} the property string including colons (e.g. background: or background-image:)
+	 * @param {string} list of linear-gradient functions
+	 */
+	function replaceLinearGradientDegrees(match, pre, linearGradients) {
+		return pre + linearGradients.replace(bgLinearGradientDegrees, function (submatch, pre, value) {
+			return pre + (+value * -1);
+		});
 	}
 
 	/**
@@ -374,7 +390,9 @@ function CSSJanus() {
 				.replace( fourNotationColorRegExp, '$1$2$3$8$5$6$7$4$9' )
 				// Flip horizontal background percentages
 				.replace( bgHorizontalPercentageRegExp, calculateNewBackgroundPosition )
-				.replace( bgHorizontalPercentageXRegExp, calculateNewBackgroundPosition );
+				.replace( bgHorizontalPercentageXRegExp, calculateNewBackgroundPosition )
+				// Flip degrees in linear-gradient backgrounds
+				.replace( bgLinearGradient, replaceLinearGradientDegrees );
 
 			// Detokenize
 			css = noFlipSingleTokenizer.detokenize(
